@@ -208,11 +208,16 @@ def register_handlers(client):
             me2 = await event.client.get_me()
             owner_id = clone_owners.get(me2.id)
 
-            buttons = [
-                [
-                    Button.url("⚡OWNER ⚡", f"tg://user?id={owner_id}")
-                ]
-            ]
+            if owner_username:
+    owner_link = f"https://t.me/{owner_username}"
+else:
+    owner_link = f"https://t.me/{CLONE_SOURCE.replace('@', '')}"
+
+buttons = [
+    [
+        Button.url("⚡OWNER ⚡", owner_link)
+    ]
+]
 
             await event.respond(start_text, buttons=buttons)
 
@@ -279,13 +284,20 @@ async def clone_bot(event):
                     f"Owner: {owner.first_name}"
                 )
 
-                await bot.send_message(
-                    OWNER_ID,
-                    notify_text,
-                    buttons=[
-                        [Button.url("👑 Clone Owner", f"tg://user?id={owner.id}")]
-                    ]
-                )
+                owner_username = getattr(owner, "username", None)
+
+if owner_username:
+    link = f"https://t.me/{owner_username}"
+else:
+    link = f"https://t.me/{CLONE_SOURCE.replace('@', '')}"
+
+await bot.send_message(
+    OWNER_ID,
+    notify_text,
+    buttons=[
+        [Button.url("👑 Clone Owner", link)]
+    ]
+)
             except:
                 pass
 
