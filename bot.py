@@ -194,40 +194,47 @@ async def clone_bot(event):
         return await event.reply("You already have a clone running.")
 
     async def run_clone():
-        clone_client = TelegramClient(MemorySession(), API_ID, API_HASH)
-        await clone_client.start(bot_token=token)
-
-        register_handlers(clone_client)
-
-        clone_owners[clone_client] = event.sender_id
-        all_clone_clients.append(clone_client)
-
-        me = await clone_client.get_me()
-        owner = await event.get_sender()
-
-        notif = (
-            f"#New_Cloned_Bot\n\n"
-            f"ʙᴏᴛ:- {me.first_name}\n"
-            f"ᴜsᴇʀɴᴀᴍᴇ: @{me.username}\n"
-            f"ʙᴏᴛ ɪᴅ : {me.id}\n\n"
-            f"ᴏᴡɴᴇʀ : {owner.first_name} ({owner.id})"
-        )
-
         try:
-            await bot.send_message(OWNER_ID, notif)
-        except:
-            pass
+            clone_client = TelegramClient(MemorySession(), API_ID, API_HASH)
+            await clone_client.start(bot_token=token)
 
-        print(f"Clone started @{me.username}")
-        await clone_client.run_until_disconnected()
+            me = await clone_client.get_me()
 
-    try:
-        task = asyncio.create_task(run_clone())
-        clones[event.sender_id] = task
-        await event.reply("✅ Clone bot started.")
-    except Exception as e:
-        await event.reply(f"❌ Error: {e}")
+            # register handlers AFTER login
+            register_handlers(clone_client)
 
+            clone_owners[me.id] = event.sender_id
+            all_clone_clients.append(clone_client)
+
+            owner = await event.get_sender()
+
+            notif = (
+                f"#New_Cloned_Bot\n\n"
+                f"Bot: {me.first_name}\n"
+                f"Username: @{me.username}\n"
+                f"Bot ID: {me.id}\n\n"
+                f"Owner: {owner.first_name} ({owner.id})"
+            )
+
+            try:
+                await bot.send_message(OWNER_ID, notif)
+            except:
+                pass
+
+            await event.reply(
+                f"✅ Clone bot started successfully.\n\n"
+                f"Username: @{me.username}"
+            )
+
+            print(f"Clone started @{me.username}")
+
+            await clone_client.run_until_disconnected()
+
+        except Exception as e:
+            await event.reply(f"❌ Clone failed: {e}")
+
+    task = asyncio.create_task(run_clone())
+    clones[event.sender_id] = task
 
 # =========================
 # START / HELP
@@ -245,6 +252,7 @@ async def start_help(event):
         f"- /stopall\n"
         f"- /mentioall\n"
         f"- /mentionadmin\n"
+        f"- /clone\n"
         f"- /onlyadmins\n"
         f"- /noonlyadmins\n"
         f"- /broadcast\n"
