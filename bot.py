@@ -214,6 +214,147 @@ async def start_help(event):
         f"If you want to do that, just write /clone in a private chat."
     )
 
+    buttons = [
+        [
+            Button.url('📡 Channel', 'https://t.me/FROZENTOOLS'),
+            Button.url('ℹ️ Source', 'https://github.com/TMM-TEAM/mentionall')
+        ]
+    ]
+
+    await event.respond(text, buttons=buttons)
+    if event.client != bot:
+        text += f"\n\nYou can clone from here only {CLONE_SOURCE}"
+
+    await event.reply(text)
+
+
+# =========================
+# MAIN
+# =========================
+async def main():
+    await bot.start(bot_token=BOT_TOKEN)
+    me = await bot.get_me()
+    print(f"Bot online @{me.username}")
+    await bot.run_until_disconnected()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print("CRASH:", e)
+        traceback.print_exc()    @client.on(events.NewMessage(pattern=r"^/stopall$"))
+    async def stop_all(event):
+        if not event.is_group:
+            return
+
+        if event.chat_id not in running:
+            return await event.reply("No active mentionall running.")
+
+        starter = running[event.chat_id]
+
+        if event.sender_id != starter and not await is_admin(
+            client, event.chat_id, event.sender_id
+        ):
+            return await event.reply("You are not allowed to stop this.")
+
+        cancelled[event.chat_id] = True
+        await event.reply("Stopped mentionall.")
+
+    @client.on(events.NewMessage(pattern=r"^/onlyadmins$"))
+    async def only_admins(event):
+        if not event.is_group:
+            return
+
+        if not await is_admin(client, event.chat_id, event.sender_id):
+            return await event.reply("Admins only.")
+
+        only_admins_mode[event.chat_id] = True
+        await event.reply("Now only admins can use mentionall.")
+
+    @client.on(events.NewMessage(pattern=r"^/noonlyadmins$"))
+    async def no_only_admins(event):
+        if not event.is_group:
+            return
+
+        if not await is_admin(client, event.chat_id, event.sender_id):
+            return await event.reply("Admins only.")
+
+        only_admins_mode[event.chat_id] = False
+        await event.reply("Now everyone can use mentionall.")
+
+
+register_handlers(bot)
+
+
+# =========================
+# CLONE SYSTEM
+# =========================
+@bot.on(events.NewMessage(pattern=r"/clone(?: |$)(.*)"))
+async def clone_bot(event):
+    if event.is_group:
+        return await event.reply("Use in private.")
+
+    token = event.pattern_match.group(1).strip()
+
+    if not token:
+        return await event.reply("Usage: /clone BOT_TOKEN")
+
+    if event.sender_id in clones:
+        return await event.reply("You already have a clone running.")
+
+    async def run_clone():
+        clone_client = TelegramClient(MemorySession(), API_ID, API_HASH)
+        await clone_client.start(bot_token=token)
+        register_handlers(clone_client)
+
+        me = await clone_client.get_me()
+        owner = await event.get_sender()
+
+        notif = (
+            f"#New_Cloned_Bot\n\n"
+            f"ʙᴏᴛ:- {me.first_name}\n"
+            f"ᴜsᴇʀɴᴀᴍᴇ: @{me.username}\n"
+            f"ʙᴏᴛ ɪᴅ : {me.id}\n\n"
+            f"ᴏᴡɴᴇʀ : {owner.first_name} ({owner.id})"
+        )
+
+        try:
+            await bot.send_message(OWNER_ID, notif)
+        except:
+            pass
+
+        print(f"Clone started @{me.username}")
+        await clone_client.run_until_disconnected()
+
+    try:
+        task = asyncio.create_task(run_clone())
+        clones[event.sender_id] = task
+        await event.reply("✅ Clone bot started.")
+    except Exception as e:
+        await event.reply(f"❌ Error: {e}")
+
+
+# =========================
+# START / HELP
+# =========================
+@bot.on(events.NewMessage(pattern=r"/start|/help"))
+async def start_help(event):
+    me = await bot.get_me()
+
+    text = (
+        f"Hi and welcome to @{me.username}.\n"
+        f"This bot is used to tag all the users in a group.\n\n"
+        f"To use it, it's only needed to insert it in a group "
+        f"(as standard user) and to start a phrase with @all or #all.\n\n"
+        f"Commands (to write in group):\n"
+        f"- /stopall - Stops a running @all.\n"
+        f"- /onlyadmins - Set the bot to work only for admins.\n"
+        f"- /noonlyadmins - Set the bot to work with everyone.\n\n"
+        f"I suggest to clone the bot in order to have a better performance.\n"
+        f"If you want to do that, just write /clone in a private chat."
+    )
+
     if event.client != bot:
         text += f"\n\nYou can clone from here only {CLONE_SOURCE}"
 
