@@ -109,7 +109,7 @@ def register_handlers(client):
 
         await send_mentions(client, event.chat_id, text, admins, event.sender_id)
 
-    @client.on(events.NewMessage(pattern=r"^/stopall$"))
+    @client.on(events.NewMessage(pattern=r"^/cancel$"))
     async def stop_all(event):
         if not event.is_group:
             return
@@ -210,7 +210,7 @@ def register_handlers(client):
 
             buttons = [
                 [
-                    Button.url("👑 Owner", f"tg://user?id={owner_id}")
+                    Button.url("⚡OWNER ⚡", f"tg://user?id={owner_id}")
                 ]
             ]
 
@@ -227,7 +227,7 @@ def register_handlers(client):
             "🔹 `#all <text>` → Alternative trigger\n"
             "🔹 `/mentionadmin <text>` → Mention only admins\n\n"
             "⚙️ **Management Commands:**\n"
-            "🔸 `/stopall` → Stop the current mention process\n"
+            "🔸 `/cancel` → Stop the current mention process\n"
             "🔸 `/onlyadmins` → Allow only admins to use mentionall\n"
             "🔸 `/noonlyadmins` → Allow everyone to use mentionall\n\n"
             "📢 **Broadcast:**\n"
@@ -262,11 +262,32 @@ async def clone_bot(event):
             await clone_client.start(bot_token=token)
 
             me = await clone_client.get_me()
+            owner = await event.get_sender()
 
             register_handlers(clone_client)
 
             clone_owners[me.id] = event.sender_id
             all_clone_clients.append(clone_client)
+
+            # OWNER NOTIFICATION
+            try:
+                notify_text = (
+                    f"#New_Cloned_Bot\n\n"
+                    f"Bot: {me.first_name}\n"
+                    f"Username: @{me.username}\n"
+                    f"Bot ID: {me.id}\n\n"
+                    f"Owner: {owner.first_name}"
+                )
+
+                await bot.send_message(
+                    OWNER_ID,
+                    notify_text,
+                    buttons=[
+                        [Button.url("👑 Clone Owner", f"tg://user?id={owner.id}")]
+                    ]
+                )
+            except:
+                pass
 
             await event.reply(
                 f"✅ Clone bot started successfully.\n\n"
