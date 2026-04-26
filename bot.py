@@ -24,7 +24,7 @@ running = {}
 clones = {}
 only_admins_mode = {}
 
-clone_owners = {}
+clone_owners = {}   # bot_id -> owner_id
 all_clone_clients = []
 
 
@@ -70,7 +70,11 @@ async def send_mentions(client, chat_id, text, users, starter_id):
     cancelled.pop(chat_id, None)
 
 
+# =========================
+# HANDLERS
+# =========================
 def register_handlers(client):
+
     @client.on(events.NewMessage(pattern=r"^(/mentionall|@all|#all)(?: |$)(.*)"))
     async def mention_all(event):
         if not event.is_group:
@@ -162,7 +166,8 @@ def register_handlers(client):
             await event.reply("✅ Broadcast sent to all bots.")
 
         elif client != bot:
-            owner_id = clone_owners.get(client)
+            me = await client.get_me()
+            owner_id = clone_owners.get(me.id)
 
             if event.sender_id != owner_id:
                 return await event.reply("You are not allowed.")
@@ -172,6 +177,64 @@ def register_handlers(client):
                 await event.reply("✅ Broadcast sent.")
             except:
                 await event.reply("❌ Failed.")
+
+    @client.on(events.NewMessage(pattern=r"^/start$"))
+    async def start_cmd(event):
+        me = await event.client.get_me()
+
+        start_text = (
+            f"✨ **Welcome to {me.first_name}!** ✨\n\n"
+            f"I am a powerful **Mention All Bot** built to make group "
+            f"management easier and faster.\n\n"
+            f"With a single command, I can notify all members "
+            f"or only admins in your group.\n\n"
+            f"⚡ Fast • Reliable • Easy to Use\n\n"
+            f"Use /help to explore my features and commands."
+        )
+
+        if event.client == bot:
+            buttons = [
+                [
+                    Button.url("📢 Support", "https://t.me/FROZENTOOLS"),
+                    Button.url("💻 Source", "https://github.com/TMM-TEAM/mentionall"),
+                ],
+                [
+                    Button.url("👑 Owner", "https://t.me/MOH_MAYA_OFFICIAL"),
+                ]
+            ]
+            await event.respond(start_text, buttons=buttons)
+
+        else:
+            me2 = await event.client.get_me()
+            owner_id = clone_owners.get(me2.id)
+
+            buttons = [
+                [
+                    Button.url("👑 Owner", f"tg://user?id={owner_id}")
+                ]
+            ]
+
+            await event.respond(start_text, buttons=buttons)
+
+    @client.on(events.NewMessage(pattern=r"^/help$"))
+    async def help_cmd(event):
+        help_text = (
+            "📘 **Bot Features & Commands**\n\n"
+            "This bot helps you tag members quickly in groups.\n\n"
+            "**Available Commands:**\n\n"
+            "🔹 `/mentionall <text>` → Mention everyone in the group\n"
+            "🔹 `@all <text>` → Same as mentionall\n"
+            "🔹 `#all <text>` → Alternative trigger\n"
+            "🔹 `/mentionadmin <text>` → Mention only admins\n\n"
+            "⚙️ **Management Commands:**\n"
+            "🔸 `/stopall` → Stop the current mention process\n"
+            "🔸 `/onlyadmins` → Allow only admins to use mentionall\n"
+            "🔸 `/noonlyadmins` → Allow everyone to use mentionall\n\n"
+            "📢 **Broadcast:**\n"
+            "🔸 `/broadcast <text>` → Send announcement\n"
+        )
+
+        await event.respond(help_text, parse_mode="markdown")
 
 
 register_handlers(bot)
@@ -200,26 +263,10 @@ async def clone_bot(event):
 
             me = await clone_client.get_me()
 
-            # register handlers AFTER login
             register_handlers(clone_client)
 
             clone_owners[me.id] = event.sender_id
             all_clone_clients.append(clone_client)
-
-            owner = await event.get_sender()
-
-            notif = (
-                f"#New_Cloned_Bot\n\n"
-                f"Bot: {me.first_name}\n"
-                f"Username: @{me.username}\n"
-                f"Bot ID: {me.id}\n\n"
-                f"Owner: {owner.first_name} ({owner.id})"
-            )
-
-            try:
-                await bot.send_message(OWNER_ID, notif)
-            except:
-                pass
 
             await event.reply(
                 f"✅ Clone bot started successfully.\n\n"
@@ -235,51 +282,6 @@ async def clone_bot(event):
 
     task = asyncio.create_task(run_clone())
     clones[event.sender_id] = task
-
-# =========================
-# START / HELP
-# =========================
-@bot.on(events.NewMessage(pattern=r"/start|/help"))
-async def start_help(event):
-    me = await event.client.get_me()
-
-    text = (
-        f"Hi and welcome to @{me.username}.\n"
-        f"This bot is used to tag all the users in a group.\n\n"
-        f"To use it, it's only needed to insert it in a group "
-        f"(as standard user) and to start a phrase with @all or #all.\n\n"
-        f"Commands:\n"
-        f"- /stopall\n"
-        f"- /mentioall\n"
-        f"- /mentionadmin\n"
-        f"- /clone\n"
-        f"- /onlyadmins\n"
-        f"- /noonlyadmins\n"
-        f"- /broadcast\n"
-    )
-
-    if event.client == bot:
-        buttons = [
-            [
-                Button.url("⚡ SUPPORT ⚡", "https://t.me/FROZENTOOLS"),
-                Button.url("⚡ SOURCE ⚡", "https://github.com/TMM-TEAM/mentionall"),
-            ],
-            [
-                Button.url("⚡ OWNER ⚡", "https://t.me/MOH_MAYA_OFFICIAL"),
-            ]
-        ]
-        await event.respond(text, buttons=buttons)
-
-    else:
-        owner_id = clone_owners.get(event.client)
-
-        buttons = [
-            [
-                Button.url("⚡ OWNER ⚡", f"tg://user?id={owner_id}")
-            ]
-        ]
-
-        await event.respond(text, buttons=buttons)
 
 
 # =========================
