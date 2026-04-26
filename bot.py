@@ -24,7 +24,7 @@ running = {}
 clones = {}
 only_admins_mode = {}
 
-clone_owners = {}   # bot_id -> owner_id
+clone_owners = {}
 all_clone_clients = []
 
 
@@ -75,171 +75,38 @@ async def send_mentions(client, chat_id, text, users, starter_id):
 # =========================
 def register_handlers(client):
 
-    @client.on(events.NewMessage(pattern=r"^(/mentionall|@all|#all)(?: |$)(.*)"))
-    async def mention_all(event):
-        if not event.is_group:
-            return
-
-        if only_admins_mode.get(event.chat_id, False):
-            if not await is_admin(client, event.chat_id, event.sender_id):
-                return await event.reply("Only admins can use this command.")
-
-        text = event.pattern_match.group(2).strip() or "Attention everyone!"
-
-        users = []
-        async for user in client.iter_participants(event.chat_id):
-            if not user.bot and not user.deleted:
-                users.append(user)
-
-        await send_mentions(client, event.chat_id, text, users, event.sender_id)
-
-    @client.on(events.NewMessage(pattern=r"^(/mentionadmin)(?: |$)(.*)"))
-    async def mention_admin(event):
-        if not event.is_group:
-            return
-
-        text = event.pattern_match.group(2).strip() or "Attention admins!"
-
-        admins = []
-        async for user in client.iter_participants(
-            event.chat_id, filter=ChannelParticipantsAdmins
-        ):
-            if not user.bot:
-                admins.append(user)
-
-        await send_mentions(client, event.chat_id, text, admins, event.sender_id)
-
-    @client.on(events.NewMessage(pattern=r"^/cancel$"))
-    async def stop_all(event):
-        if not event.is_group:
-            return
-
-        if event.chat_id not in running:
-            return await event.reply("No active mentionall running.")
-
-        starter = running[event.chat_id]
-
-        if event.sender_id != starter and not await is_admin(
-            client, event.chat_id, event.sender_id
-        ):
-            return await event.reply("You are not allowed to stop this.")
-
-        cancelled[event.chat_id] = True
-        await event.reply("Stopped mentionall.")
-
-    @client.on(events.NewMessage(pattern=r"^/onlyadmins$"))
-    async def only_admins(event):
-        if not event.is_group:
-            return
-
-        if not await is_admin(client, event.chat_id, event.sender_id):
-            return await event.reply("Admins only.")
-
-        only_admins_mode[event.chat_id] = True
-        await event.reply("Now only admins can use mentionall.")
-
-    @client.on(events.NewMessage(pattern=r"^/noonlyadmins$"))
-    async def no_only_admins(event):
-        if not event.is_group:
-            return
-
-        if not await is_admin(client, event.chat_id, event.sender_id):
-            return await event.reply("Admins only.")
-
-        only_admins_mode[event.chat_id] = False
-        await event.reply("Now everyone can use mentionall.")
-
-    @client.on(events.NewMessage(pattern=r"^/broadcast(?: |$)(.*)"))
-    async def broadcast(event):
-        msg = event.pattern_match.group(1).strip()
-
-        if not msg:
-            return await event.reply("Usage: /broadcast your_message")
-
-        if client == bot and event.sender_id == OWNER_ID:
-            for clone_client in all_clone_clients:
-                try:
-                    await clone_client.send_message("me", msg)
-                except:
-                    pass
-
-            await event.reply("✅ Broadcast sent to all bots.")
-
-        elif client != bot:
-            me = await client.get_me()
-            owner_id = clone_owners.get(me.id)
-
-            if event.sender_id != owner_id:
-                return await event.reply("You are not allowed.")
-
-            try:
-                await client.send_message("me", msg)
-                await event.reply("✅ Broadcast sent.")
-            except:
-                await event.reply("❌ Failed.")
-
     @client.on(events.NewMessage(pattern=r"^/start$"))
     async def start_cmd(event):
         me = await event.client.get_me()
 
         start_text = (
             f"✨ **Welcome to {me.first_name}!** ✨\n\n"
-            f"I am a powerful **Mention All Bot** built to make group "
-            f"management easier and faster.\n\n"
-            f"With a single command, I can notify all members "
-            f"or only admins in your group.\n\n"
             f"⚡ Fast • Reliable • Easy to Use\n\n"
-            f"Use /help to explore my features and commands."
+            f"Use /help to explore my features."
         )
 
         if event.client == bot:
             buttons = [
-                [
-                    Button.url("📢 Support", "https://t.me/FROZENTOOLS"),
-                    Button.url("💻 Source", "https://github.com/TMM-TEAM/mentionall"),
-                ],
-                [
-                    Button.url("👑 Owner", "https://t.me/MOH_MAYA_OFFICIAL"),
-                ]
+                [Button.url("📢 Support", "https://t.me/FROZENTOOLS")],
+                [Button.url("👑 Owner", "https://t.me/MOH_MAYA_OFFICIAL")]
             ]
-            await event.respond(start_text, buttons=buttons)
-
         else:
             me2 = await event.client.get_me()
             owner_id = clone_owners.get(me2.id)
 
+            owner = await bot.get_entity(owner_id)
+            owner_username = getattr(owner, "username", None)
+
             if owner_username:
-    owner_link = f"https://t.me/{owner_username}"
-else:
-    owner_link = f"https://t.me/{CLONE_SOURCE.replace('@', '')}"
+                owner_link = f"https://t.me/{owner_username}"
+            else:
+                owner_link = "https://t.me/frozentools"
 
-buttons = [
-    [
-        Button.url("⚡OWNER ⚡", owner_link)
-    ]
-]
+            buttons = [
+                [Button.url("⚡OWNER ⚡", owner_link)]
+            ]
 
-            await event.respond(start_text, buttons=buttons)
-
-    @client.on(events.NewMessage(pattern=r"^/help$"))
-    async def help_cmd(event):
-        help_text = (
-            "📘 **Bot Features & Commands**\n\n"
-            "This bot helps you tag members quickly in groups.\n\n"
-            "**Available Commands:**\n\n"
-            "🔹 `/mentionall <text>` → Mention everyone in the group\n"
-            "🔹 `@all <text>` → Same as mentionall\n"
-            "🔹 `#all <text>` → Alternative trigger\n"
-            "🔹 `/mentionadmin <text>` → Mention only admins\n\n"
-            "⚙️ **Management Commands:**\n"
-            "🔸 `/cancel` → Stop the current mention process\n"
-            "🔸 `/onlyadmins` → Allow only admins to use mentionall\n"
-            "🔸 `/noonlyadmins` → Allow everyone to use mentionall\n\n"
-            "📢 **Broadcast:**\n"
-            "🔸 `/broadcast <text>` → Send announcement\n"
-        )
-
-        await event.respond(help_text, parse_mode="markdown")
+        await event.respond(start_text, buttons=buttons)
 
 
 register_handlers(bot)
@@ -262,9 +129,17 @@ async def clone_bot(event):
         return await event.reply("You already have a clone running.")
 
     async def run_clone():
+        process = await event.reply("⚡ **Clone Process Started...**\n\n`10%`")
+
         try:
+            await asyncio.sleep(1)
+            await process.edit("⚡ **Validating Token...**\n\n`30%`")
+
             clone_client = TelegramClient(MemorySession(), API_ID, API_HASH)
             await clone_client.start(bot_token=token)
+
+            await asyncio.sleep(1)
+            await process.edit("⚡ **Setting Up Clone...**\n\n`60%`")
 
             me = await clone_client.get_me()
             owner = await event.get_sender()
@@ -274,7 +149,9 @@ async def clone_bot(event):
             clone_owners[me.id] = event.sender_id
             all_clone_clients.append(clone_client)
 
-            # OWNER NOTIFICATION
+            await asyncio.sleep(1)
+            await process.edit("⚡ **Finalizing Clone...**\n\n`90%`")
+
             try:
                 notify_text = (
                     f"#New_Cloned_Bot\n\n"
@@ -286,24 +163,23 @@ async def clone_bot(event):
 
                 owner_username = getattr(owner, "username", None)
 
-if owner_username:
-    link = f"https://t.me/{owner_username}"
-else:
-    link = f"https://t.me/{CLONE_SOURCE.replace('@', '')}"
+                if owner_username:
+                    link = f"https://t.me/{owner_username}"
+                else:
+                    link = "https://t.me/frozentools"
 
-await bot.send_message(
-    OWNER_ID,
-    notify_text,
-    buttons=[
-        [Button.url("👑 Clone Owner", link)]
-    ]
-)
+                await bot.send_message(
+                    OWNER_ID,
+                    notify_text,
+                    buttons=[[Button.url("👑 Clone Owner", link)]]
+                )
             except:
                 pass
 
-            await event.reply(
-                f"✅ Clone bot started successfully.\n\n"
-                f"Username: @{me.username}"
+            await process.edit(
+                f"✅ **Clone Completed Successfully!**\n\n"
+                f"Bot: @{me.username}\n"
+                f"`100%`"
             )
 
             print(f"Clone started @{me.username}")
@@ -311,7 +187,7 @@ await bot.send_message(
             await clone_client.run_until_disconnected()
 
         except Exception as e:
-            await event.reply(f"❌ Clone failed: {e}")
+            await process.edit(f"❌ Clone failed:\n`{e}`")
 
     task = asyncio.create_task(run_clone())
     clones[event.sender_id] = task
