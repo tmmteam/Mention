@@ -243,6 +243,8 @@ async def start_help(event):
         f"(as standard user) and to start a phrase with @all or #all.\n\n"
         f"Commands:\n"
         f"- /stopall\n"
+        f"- /mentioall\n"
+        f"- /mentionadmin\n"
         f"- /onlyadmins\n"
         f"- /noonlyadmins\n"
         f"- /broadcast\n"
