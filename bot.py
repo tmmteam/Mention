@@ -81,6 +81,7 @@ def register_handlers(client):
 
         start_text = (
             f"✨ **Welcome to {me.first_name}!** ✨\n\n"
+            f"I am a powerful Mention All Bot built to make group management easier and faster.\nWith a single command, I can notify all members or only admins in your group.        
             f"⚡ Fast • Reliable • Easy to Use\n\n"
             f"Use /help to explore my features."
         )
@@ -111,7 +112,32 @@ def register_handlers(client):
 
 register_handlers(bot)
 
+# =========================
+# HELP COMMAND 
+# =========================
+client.on(events.NewMessage(pattern=r"^/help$"))
+async def help_cmd(event):
+    me = await event.client.get_me()
 
+    help_text = (
+        f"📘 **{me.first_name} - Help Menu**\n\n"
+
+        f"🤖 This bot helps you tag members quickly in groups.\n\n"
+
+        f"🔹 **Available Commands:**\n"
+        f"/mentionall <text> → Mention everyone in the group\n"
+        f"@all <text> → Same as mentionall\n"
+        f"#all <text> → Alternative trigger\n"
+        f"/mentionadmin <text> → Mention only admins\n\n"
+
+        f"⚙️ **Management Commands:**\n"
+        f"/stopall → Stop the current mention process\n"
+        f"/onlyadmins → Allow only admins to use mentionall\n"
+        f"/noonlyadmins → Allow everyone to use mentionall\n\n"
+
+        f"📢 **Broadcast:**\n"
+        f"/broadcast <text> → Send announcement"
+    )
 # =========================
 # CLONE SYSTEM
 # =========================
