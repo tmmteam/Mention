@@ -75,7 +75,110 @@ async def send_mentions(client, chat_id, text, users, starter_id):
 # =========================
 def register_handlers(client):
 
-    @client.on(events.NewMessage(pattern=r"^/start$"))
+    @client.on(events.NewMessage(pattern=r"^(/mentionall|@all|#all)(?: |$)(.*)"))
+    async def mention_all(event):
+        if not event.is_group:
+            return
+
+        if only_admins_mode.get(event.chat_id, False):
+            if not await is_admin(client, event.chat_id, event.sender_id):
+                return await event.reply("Only admins can use this command.")
+
+        text = event.pattern_match.group(2).strip() or "Attention everyone!"
+
+        users = []
+        async for user in client.iter_participants(event.chat_id):
+            if not user.bot and not user.deleted:
+                users.append(user)
+
+        await send_mentions(client, event.chat_id, text, users, event.sender_id)
+
+    @client.on(events.NewMessage(pattern=r"^(/mentionadmin)(?: |$)(.*)"))
+    async def mention_admin(event):
+        if not event.is_group:
+            return
+
+        text = event.pattern_match.group(2).strip() or "Attention admins!"
+
+        admins = []
+        async for user in client.iter_participants(
+            event.chat_id, filter=ChannelParticipantsAdmins
+        ):
+            if not user.bot:
+                admins.append(user)
+
+        await send_mentions(client, event.chat_id, text, admins, event.sender_id)
+
+    @client.on(events.NewMessage(pattern=r"^/stopall$"))
+    async def stop_all(event):
+        if not event.is_group:
+            return
+
+        if event.chat_id not in running:
+            return await event.reply("No active mentionall running.")
+
+        starter = running[event.chat_id]
+
+        if event.sender_id != starter and not await is_admin(
+            client, event.chat_id, event.sender_id
+        ):
+            return await event.reply("You are not allowed to stop this.")
+
+        cancelled[event.chat_id] = True
+        await event.reply("Stopped mentionall.")
+
+    @client.on(events.NewMessage(pattern=r"^/onlyadmins$"))
+    async def only_admins(event):
+        if not event.is_group:
+            return
+
+        if not await is_admin(client, event.chat_id, event.sender_id):
+            return await event.reply("Admins only.")
+
+        only_admins_mode[event.chat_id] = True
+        await event.reply("Now only admins can use mentionall.")
+
+    @client.on(events.NewMessage(pattern=r"^/noonlyadmins$"))
+    async def no_only_admins(event):
+        if not event.is_group:
+            return
+
+        if not await is_admin(client, event.chat_id, event.sender_id):
+            return await event.reply("Admins only.")
+
+        only_admins_mode[event.chat_id] = False
+        await event.reply("Now everyone can use mentionall.")
+
+    @client.on(events.NewMessage(pattern=r"^/broadcast(?: |$)(.*)"))
+    async def broadcast(event):
+        msg = event.pattern_match.group(1).strip()
+
+        if not msg:
+            return await event.reply("Usage: /broadcast your_message")
+
+        if client == bot and event.sender_id == OWNER_ID:
+            for clone_client in all_clone_clients:
+                try:
+                    await clone_client.send_message("me", msg)
+                except:
+                    pass
+
+            await event.reply("✅ Broadcast sent to all bots.")
+
+        elif client != bot:
+            me = await client.get_me()
+            owner_id = clone_owners.get(me.id)
+
+            if event.sender_id != owner_id:
+                return await event.reply("You are not allowed.")
+
+            try:
+                await client.send_message("me", msg)
+                await event.reply("✅ Broadcast sent.")
+            except:
+                await event.reply("❌ Failed.")
+
+   @client.on(events.NewMessage(pattern=r"^/start$"))
     async def start_cmd(event):
         me = await event.client.get_me()
 
@@ -138,6 +241,11 @@ async def help_cmd(event):
         f"📢 **Broadcast:**\n"
         f"/broadcast <text> → Send announcement"
     )
+    await event.respond(help_text, parse_mode="markdown")
+
+
+register_handlers(bot)
+
 # =========================
 # CLONE SYSTEM
 # =========================
