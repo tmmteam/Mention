@@ -51,6 +51,7 @@ async def send_mentions(client, chat_id, text, users, starter_id):
             break
 
         batch = users[i:i + batch_size]
+
         mentions = " ".join(
             [f"[{u.first_name or 'User'}](tg://user?id={u.id})" for u in batch]
         )
@@ -87,6 +88,7 @@ def register_handlers(client):
         text = event.pattern_match.group(2).strip() or "Attention everyone!"
 
         users = []
+
         async for user in client.iter_participants(event.chat_id):
             if not user.bot and not user.deleted:
                 users.append(user)
@@ -101,8 +103,10 @@ def register_handlers(client):
         text = event.pattern_match.group(2).strip() or "Attention admins!"
 
         admins = []
+
         async for user in client.iter_participants(
-            event.chat_id, filter=ChannelParticipantsAdmins
+            event.chat_id,
+            filter=ChannelParticipantsAdmins
         ):
             if not user.bot:
                 admins.append(user)
@@ -120,7 +124,9 @@ def register_handlers(client):
         starter = running[event.chat_id]
 
         if event.sender_id != starter and not await is_admin(
-            client, event.chat_id, event.sender_id
+            client,
+            event.chat_id,
+            event.sender_id
         ):
             return await event.reply("You are not allowed to stop this.")
 
@@ -157,6 +163,7 @@ def register_handlers(client):
             return await event.reply("Usage: /broadcast your_message")
 
         if client == bot and event.sender_id == OWNER_ID:
+
             for clone_client in all_clone_clients:
                 try:
                     await clone_client.send_message("me", msg)
@@ -166,6 +173,7 @@ def register_handlers(client):
             await event.reply("✅ Broadcast sent to all bots.")
 
         elif client != bot:
+
             me = await client.get_me()
             owner_id = clone_owners.get(me.id)
 
@@ -178,23 +186,28 @@ def register_handlers(client):
             except:
                 await event.reply("❌ Failed.")
 
-   @client.on(events.NewMessage(pattern=r"^/start$"))
+    @client.on(events.NewMessage(pattern=r"^/start$"))
     async def start_cmd(event):
+
         me = await event.client.get_me()
 
         start_text = (
             f"✨ **Welcome to {me.first_name}!** ✨\n\n"
-            f"I am a powerful Mention All Bot built to make group management easier and faster.\nWith a single command, I can notify all members or only admins in your group.        
+            f"I am a powerful Mention All Bot built to make group management easier and faster.\n"
+            f"With a single command, I can notify all members or only admins in your group.\n\n"
             f"⚡ Fast • Reliable • Easy to Use\n\n"
             f"Use /help to explore my features."
         )
 
         if event.client == bot:
+
             buttons = [
                 [Button.url("📢 Support", "https://t.me/FROZENTOOLS")],
                 [Button.url("👑 Owner", "https://t.me/MOH_MAYA_OFFICIAL")]
             ]
+
         else:
+
             me2 = await event.client.get_me()
             owner_id = clone_owners.get(me2.id)
 
@@ -215,16 +228,17 @@ def register_handlers(client):
 
 register_handlers(bot)
 
+
 # =========================
-# HELP COMMAND 
+# HELP COMMAND
 # =========================
-client.on(events.NewMessage(pattern=r"^/help$"))
+@bot.on(events.NewMessage(pattern=r"^/help$"))
 async def help_cmd(event):
+
     me = await event.client.get_me()
 
     help_text = (
         f"📘 **{me.first_name} - Help Menu**\n\n"
-
         f"🤖 This bot helps you tag members quickly in groups.\n\n"
 
         f"🔹 **Available Commands:**\n"
@@ -241,16 +255,16 @@ async def help_cmd(event):
         f"📢 **Broadcast:**\n"
         f"/broadcast <text> → Send announcement"
     )
+
     await event.respond(help_text, parse_mode="markdown")
 
-
-register_handlers(bot)
 
 # =========================
 # CLONE SYSTEM
 # =========================
 @bot.on(events.NewMessage(pattern=r"/clone(?: |$)(.*)"))
 async def clone_bot(event):
+
     if event.is_group:
         return await event.reply("Use in private.")
 
@@ -263,17 +277,29 @@ async def clone_bot(event):
         return await event.reply("You already have a clone running.")
 
     async def run_clone():
-        process = await event.reply("⚡ **Clone Process Started...**\n\n`10%`")
+
+        process = await event.reply(
+            "⚡ **Clone Process Started...**\n\n`10%`"
+        )
 
         try:
             await asyncio.sleep(1)
-            await process.edit("⚡ **Validating Token...**\n\n`30%`")
+            await process.edit(
+                "⚡ **Validating Token...**\n\n`30%`"
+            )
 
-            clone_client = TelegramClient(MemorySession(), API_ID, API_HASH)
+            clone_client = TelegramClient(
+                MemorySession(),
+                API_ID,
+                API_HASH
+            )
+
             await clone_client.start(bot_token=token)
 
             await asyncio.sleep(1)
-            await process.edit("⚡ **Setting Up Clone...**\n\n`60%`")
+            await process.edit(
+                "⚡ **Setting Up Clone...**\n\n`60%`"
+            )
 
             me = await clone_client.get_me()
             owner = await event.get_sender()
@@ -284,7 +310,10 @@ async def clone_bot(event):
             all_clone_clients.append(clone_client)
 
             await asyncio.sleep(1)
-            await process.edit("⚡ **Finalizing Clone...**\n\n`90%`")
+
+            await process.edit(
+                "⚡ **Finalizing Clone...**\n\n`90%`"
+            )
 
             try:
                 notify_text = (
@@ -305,8 +334,11 @@ async def clone_bot(event):
                 await bot.send_message(
                     OWNER_ID,
                     notify_text,
-                    buttons=[[Button.url("👑 Clone Owner", link)]]
+                    buttons=[
+                        [Button.url("👑 Clone Owner", link)]
+                    ]
                 )
+
             except:
                 pass
 
@@ -331,9 +363,13 @@ async def clone_bot(event):
 # MAIN
 # =========================
 async def main():
+
     await bot.start(bot_token=BOT_TOKEN)
+
     me = await bot.get_me()
+
     print(f"Bot online @{me.username}")
+
     await bot.run_until_disconnected()
 
 
